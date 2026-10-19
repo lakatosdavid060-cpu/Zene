@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="hu" class="h-full dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streamify – Prémium Zenelejátszó</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Streamify">
+    <link rel="manifest" href="manifest.json">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        spotify: {
+                            green: '#1DB954',
+                            greenHover: '#1ed760',
+                            black: '#0a0a0a',
+                            dark: '#000000',
+                            card: '#181818',
+                            cardHover: '#282828',
+                            subtext: '#a7a7a7'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #282828; border-radius: 3px; }
+        
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: #4d4d4d; border-radius: 2px; }
+        input[type=range]::-webkit-slider-thumb { height: 12px; width: 12px; border-radius: 50%; background: #ffffff; cursor: pointer; -webkit-appearance: none; margin-top: -4px; opacity: 0; transition: opacity 0.15s ease; }
+        .range-group:hover input[type=range]::-webkit-slider-thumb, input[type=range]:active::-webkit-slider-thumb { opacity: 1; }
+        .range-group:hover input[type=range]::-webkit-slider-runnable-track { background: #1DB954; }
+        
+        .glass-panel { background: rgba(24, 24, 24, 0.85); backdrop-filter: blur(16px); }
+    </style>
+</head>
+<body class="bg-spotify-dark text-white font-sans h-full overflow-hidden select-none">
+    <div id="app" class="flex flex-col h-full">
+
+        <div class="flex flex-1 overflow-hidden p-2 gap-2">
+
+            <!-- Sidebar -->
+            <aside id="sidebar" class="w-64 bg-spotify-black rounded-2xl flex flex-col gap-2 p-2 hidden md:flex shrink-0 shadow-2xl border border-white/5">
+                <div class="bg-spotify-card rounded-xl p-4 flex flex-col gap-3">
+                    <button onclick="switchView('home')" class="nav-item flex items-center gap-4 text-spotify-subtext hover:text-white transition font-bold text-sm py-1.5">
+                        <i class="fa-solid fa-house text-xl"></i> Home
+                    </button>
+                    <button onclick="switchView('search')" class="nav-item flex items-center gap-4 text-spotify-subtext hover:text-white transition font-bold text-sm py-1.5">
+                        <i class="fa-solid fa-magnifying-glass text-xl"></i> Search
+                    </button>
+                </div>
+
+                <div class="bg-spotify-card rounded-xl flex-1 p-4 flex flex-col overflow-hidden border border-white/5">
+                    <div class="flex items-center justify-between text-spotify-subtext mb-3">
+                        <button onclick="switchView('library')" class="flex items-center gap-3 hover:text-white transition font-bold text-sm">
+                            <i class="fa-solid fa-book-bookmark text-xl"></i> Your Library
+                        </button>
+                        <button onclick="openCreatePlaylistModal()" title="Create Playlist" class="hover:text-white transition hover:bg-spotify-cardHover p-2 rounded-full">
+                            <i class="fa-solid fa-plus text-lg"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex gap-2 mb-3 overflow-x-auto no-scrollbar">
+                        <button onclick="filterLibrary('all')" class="lib-filter bg-white/10 text-xs px-3 py-1.5 rounded-full hover:bg-white/20 transition active font-semibold">Playlists</button>
+                        <button onclick="filterLibrary('liked')" class="lib-filter bg-white/10 text-xs px-3 py-1.5 rounded-full hover:bg-white/20 transition font-semibold">Liked</button>
+                    </div>
+
+                    <div id="library-list" class="flex-1 overflow-y-auto flex flex-col gap-1 pr-1"></div>
+                </div>
+            </aside>
+
+            <!-- Content Area -->
+            <main class="flex-1 bg-spotify-black rounded-2xl flex flex-col overflow-hidden relative shadow-2xl border border-white/5">
+                
+                <header class="glass-panel sticky top-0 z-20 flex items-center justify-between p-4 px-6 border-b border-white/5">
+                    <div class="flex items-center gap-4">
+                        <div class="flex gap-2">
+                            <button onclick="history.back()" class="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center text-spotify-subtext hover:text-white transition">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                            <button onclick="history.forward()" class="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center text-spotify-subtext hover:text-white transition">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+
+                        <div class="relative hidden sm:block w-72 md:w-96">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-spotify-subtext"></i>
+                            <input type="text" id="global-search-input" oninput="handleSearch(this.value)" placeholder="Mit szeretnél hallgatni?" 
+                                class="w-full bg-spotify-cardHover text-sm rounded-full pl-10 pr-4 py-2.5 border border-transparent focus:border-white focus:outline-none transition text-white placeholder-spotify-subtext shadow-inner">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <button onclick="openPlayerTools()" title="Lejátszó beállítások" class="w-9 h-9 rounded-full bg-white/5 text-spotify-subtext hover:text-white hover:bg-white/10 transition">
+                            <i class="fa-solid fa-gear text-sm"></i>
+                        </button>
+                        <span class="text-xs bg-gradient-to-r from-spotify-green to-emerald-400 text-black font-extrabold px-3.5 py-1.5 rounded-full uppercase tracking-wider hidden sm:inline-block shadow-lg">Premium Pro</span>
+                        <div class="w-9 h-9 rounded-full bg-spotify-green text-black font-bold flex items-center justify-center shadow-lg">
+                            <i class="fa-solid fa-user text-sm"></i>
+                        </div>
+                    </div>
+                </header>
+
+                <div id="main-view-container" class="flex-1 overflow-y-auto p-6 space-y-6">
+
+                    <!-- HOME VIEW -->
+                    <div id="view-home" class="view-content space-y-8">
+                        <div class="bg-gradient-to-r from-emerald-900/80 via-spotify-card to-spotify-card p-6 sm:p-8 rounded-2xl relative overflow-hidden flex flex-col justify-end min-h-[200px] shadow-2xl border border-white/5">
+                            <div class="relative z-10">
+                                <span class="text-xs uppercase font-bold tracking-widest text-spotify-green mb-2 block"><i class="fa-solid fa-bolt mr-1"></i> Korlátlan Zene Streaming</span>
+                                <h1 class="text-3xl sm:text-5xl font-black mb-2 text-white">Jó napot kívánok!</h1>
+                                <p class="text-spotify-subtext text-sm sm:text-base max-w-xl">Fedezz fel új zenéket, keress YouTube-videókat, építs lejátszási sort, és használd a fejlett lejátszóvezérlőket.</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h2 class="text-xl sm:text-2xl font-bold mb-4">Gyors választás</h2>
+                            <div id="quick-pick-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+                        </div>
+
+                        <div>
+                            <h2 class="text-xl sm:text-2xl font-bold mb-4">Kiemelt számok</h2>
+                            <div id="featured-tracks-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+                        </div>
+                    </div>
+
+                    <!-- SEARCH VIEW -->
+                    <div id="view-search" class="view-content hidden space-y-6">
+                        <h2 class="text-2xl font-bold">Zenék böngészése</h2>
+                        
+                        <section class="rounded-2xl border border-white/10 bg-spotify-card p-5 space-y-4 shadow-xl">
+                            <div>
+                                <h3 class="text-lg font-bold flex items-center gap-2"><i class="fa-brands fa-youtube text-red-500 text-xl"></i>YouTube Zenekereső & Lejátszó</h3>
+                                <p class="text-sm text-spotify-subtext mt-1">Keresd meg kedvenc YouTube dalodat, indítsd el, vagy mentsd el a könyvtáradba!</p>
+                            </div>
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <input id="youtube-search-input" type="search" placeholder="Előadó vagy dal címe..." class="flex-1 bg-spotify-cardHover text-sm rounded-xl px-4 py-3 border border-white/10 focus:border-spotify-green focus:outline-none text-white">
+                                <button onclick="searchYouTube(true)" class="rounded-xl bg-spotify-green text-black font-bold px-6 py-3 hover:bg-spotify-greenHover transition shadow-lg"><i class="fa-solid fa-magnifying-glass mr-2"></i>Keresés</button>
+                            </div>
+                            
+                            <p id="youtube-search-status" class="text-sm text-spotify-subtext font-medium"></p>
+                            
+                            <div id="youtube-results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+                            <div class="flex justify-center pt-2">
+                                <button id="youtube-more-btn" onclick="searchYouTube(false)" class="hidden rounded-full border border-white/20 px-6 py-2.5 text-sm hover:bg-white/10 transition">További találatok</button>
+                            </div>
+                        </section>
+
+                        <div class="bg-spotify-card/50 rounded-2xl p-4 shadow-xl border border-white/5">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-spotify-subtext border-b border-white/10 text-xs uppercase tracking-wider">
+                                        <th class="pb-3 w-10 text-center">#</th>
+                                        <th class="pb-3">Cím</th>
+                                        <th class="pb-3 hidden md:table-cell">Album</th>
+                                        <th class="pb-3 w-16 text-center"><i class="fa-regular fa-clock"></i></th>
+                                        <th class="pb-3 w-16 text-right">Művelet</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="search-tracks-list" class="divide-y divide-white/5 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- PLAYLIST & LIBRARY VIEW -->
+                    <div id="view-playlist" class="view-content hidden space-y-6">
+                        <div class="flex flex-col sm:flex-row items-center sm:items-end gap-6 pb-6 border-b border-white/10">
+                            <div id="playlist-cover" class="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl shadow-2xl bg-spotify-card flex items-center justify-center shrink-0 overflow-hidden relative border border-white/5">
+                                <i class="fa-solid fa-music text-5xl text-spotify-subtext"></i>
+                            </div>
+                            <div class="flex-1 text-center sm:text-left">
+                                <span class="text-xs uppercase font-bold tracking-wider text-spotify-subtext">LEJÁTSZÁSI LISTA</span>
+                                <h1 class="text-3xl sm:text-5xl font-black my-2 text-white" id="playlist-title">Liked Songs</h1>
+                                <p class="text-spotify-subtext text-sm" id="playlist-description">Kedvenc elmentett zenéid gyűjteménye.</p>
+                                <div class="mt-4 flex items-center gap-2 text-xs text-spotify-subtext justify-center sm:justify-start font-semibold">
+                                    <span id="playlist-track-count">0 dal</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-spotify-card/50 rounded-2xl p-4 shadow-xl border border-white/5">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-spotify-subtext border-b border-white/10 text-xs uppercase tracking-wider">
+                                        <th class="pb-3 w-10 text-center">#</th>
+                                        <th class="pb-3">Cím</th>
+                                        <th class="pb-3 hidden md:table-cell">Album</th>
+                                        <th class="pb-3 w-16 text-center"><i class="fa-regular fa-clock"></i></th>
+                                        <th class="pb-3 w-16 text-right">Művelet</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="playlist-tracks-list" class="divide-y divide-white/5 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+
+        <!-- Mobile Nav -->
+        <nav class="md:hidden bg-spotify-black border-t border-white/10 flex justify-around py-3 text-xs text-spotify-subtext">
+            <button onclick="switchView('home')" class="flex flex-col items-center gap-1 active:text-white">
+                <i class="fa-solid fa-house text-lg"></i>
+                <span>Home</span>
+            </button>
+            <button onclick="switchView('search')" class="flex flex-col items-center gap-1 active:text-white">
+                <i class="fa-solid fa-magnifying-glass text-lg"></i>
+                <span>Search</span>
+            </button>
+            <button onclick="switchView('library')" class="flex flex-col items-center gap-1 active:text-white">
+                <i class="fa-solid fa-book-bookmark text-lg"></i>
+                <span>Library</span>
+            </button>
+        </nav>
+
+        <!-- Player Footer Bar -->
+        <footer class="h-24 bg-black border-t border-white/10 px-4 flex items-center justify-between gap-4 z-30 shrink-0 shadow-2xl">
+            <div class="flex items-center gap-3 w-1/4 min-w-[160px]">
+                <img id="player-album-art" src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=150&auto=format&fit=crop&q=80" 
+                     alt="Album Art" class="w-14 h-14 rounded-xl object-cover shadow-lg bg-spotify-card border border-white/5">
+                <div class="overflow-hidden">
+                    <h4 id="player-track-title" class="text-sm font-semibold truncate text-white">Nincs dal kiválasztva</h4>
+                    <p id="player-artist-name" class="text-xs text-spotify-subtext truncate">Válassz egy zenét</p>
+                </div>
+                <button id="player-like-btn" onclick="toggleCurrentLike()" class="text-spotify-subtext hover:text-spotify-green transition ml-2 hidden sm:block">
+                    <i class="fa-regular fa-heart text-lg"></i>
+                </button>
+            </div>
+
+            <div class="flex flex-col items-center w-2/4 max-w-xl">
+                <div class="flex items-center gap-4 sm:gap-6">
+                    <button id="btn-shuffle" onclick="toggleShuffle()" class="text-spotify-subtext hover:text-white transition text-xs sm:text-sm"><i class="fa-solid fa-shuffle"></i></button>
+                    <button id="btn-prev" onclick="playPreviousTrack()" class="text-spotify-subtext hover:text-white transition text-sm sm:text-base"><i class="fa-solid fa-backward-step"></i></button>
+                    <button id="btn-play" onclick="togglePlayPause()" class="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition shadow-xl"><i class="fa-solid fa-play ml-0.5 text-base"></i></button>
+                    <button id="btn-next" onclick="playNextTrack()" class="text-spotify-subtext hover:text-white transition text-sm sm:text-base"><i class="fa-solid fa-forward-step"></i></button>
+                    <button id="btn-repeat" onclick="toggleRepeat()" class="text-spotify-subtext hover:text-white transition text-xs sm:text-sm"><i class="fa-solid fa-repeat"></i></button>
+                </div>
+
+                <div class="w-full flex items-center gap-2 mt-2 range-group">
+                    <span id="player-current-time" class="text-[10px] sm:text-xs text-spotify-subtext w-8 text-right font-mono">0:00</span>
+                    <input type="range" id="seek-slider" min="0" max="100" value="0" step="0.1" oninput="handleSeek(this.value)" class="flex-1 h-1">
+                    <span id="player-duration" class="text-[10px] sm:text-xs text-spotify-subtext w-8 text-left font-mono">0:00</span>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 w-1/4 min-w-[170px]">
+                <button onclick="seekRelative(-10)" title="10 mp vissza" class="text-spotify-subtext hover:text-white hidden sm:block"><i class="fa-solid fa-rotate-left"></i></button>
+                <button onclick="seekRelative(10)" title="10 mp előre" class="text-spotify-subtext hover:text-white hidden sm:block"><i class="fa-solid fa-rotate-right"></i></button>
+                <button onclick="openPlayerTools()" title="Lejátszó eszközök" class="text-spotify-subtext hover:text-white"><i class="fa-solid fa-sliders"></i></button>
+                <div class="flex items-center gap-2 range-group">
+                    <button id="btn-mute" onclick="toggleMute()" class="text-spotify-subtext hover:text-white transition"><i class="fa-solid fa-volume-high"></i></button>
+                    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.8" oninput="handleVolumeChange(this.value)" class="w-16 sm:w-24 h-1">
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Látható, fix YouTube Lebegő Lejátszó Doboz a jobb alsó sarokban, hogy legyen hang -->
+    <div id="youtube-float-box" class="hidden fixed bottom-28 right-6 bg-spotify-card border border-spotify-green/40 p-3 rounded-2xl shadow-2xl z-50 w-80 space-y-2">
+        <div class="flex justify-between items-center">
+            <h4 id="yt-float-title" class="font-bold text-xs truncate text-spotify-green">YouTube lejátszó</h4>
+            <button onclick="closeYouTubeFloat()" class="text-xs text-spotify-subtext hover:text-white"><i class="fa-solid fa-xmark"></i> Bezárás</button>
+        </div>
+        <div class="aspect-video w-full rounded-xl overflow-hidden bg-black">
+            <iframe id="youtube-float-iframe" class="w-full h-full" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        </div>
+    </div>
+
+    <div id="playlist-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-spotify-card border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold">Új lejátszási lista</h3>
+                <button onclick="closeCreatePlaylistModal()" class="text-spotify-subtext hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <input type="text" id="playlist-name-input" placeholder="Lista neve..." class="w-full bg-spotify-cardHover text-white p-3 rounded-xl border border-white/10 focus:border-spotify-green focus:outline-none">
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeCreatePlaylistModal()" class="px-4 py-2 rounded-full text-sm font-semibold hover:bg-white/5 transition">Mégse</button>
+                <button onclick="confirmCreatePlaylist()" class="px-6 py-2 rounded-full bg-spotify-green text-black font-bold text-sm hover:bg-spotify-greenHover transition shadow-lg">Létrehozás</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- Player tools -->
+    <div id="player-tools-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] hidden items-center justify-center p-4">
+        <div class="bg-spotify-card border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="text-lg font-bold">Lejátszó eszközök</h3>
+                <button onclick="closePlayerTools()" class="text-spotify-subtext hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="seekRelative(-10); closePlayerTools()" class="p-4 rounded-xl bg-white/5 hover:bg-white/10 text-left"><b>−10 mp</b><span class="block text-xs text-spotify-subtext mt-1">Visszatekerés</span></button>
+                <button onclick="seekRelative(10); closePlayerTools()" class="p-4 rounded-xl bg-white/5 hover:bg-white/10 text-left"><b>+10 mp</b><span class="block text-xs text-spotify-subtext mt-1">Előretekerés</span></button>
+                <button onclick="setSleepTimer(15); closePlayerTools()" class="p-4 rounded-xl bg-white/5 hover:bg-white/10 text-left"><b>15 perc</b><span class="block text-xs text-spotify-subtext mt-1">Alvásidőzítő</span></button>
+                <button onclick="setSleepTimer(30); closePlayerTools()" class="p-4 rounded-xl bg-white/5 hover:bg-white/10 text-left"><b>30 perc</b><span class="block text-xs text-spotify-subtext mt-1">Alvásidőzítő</span></button>
+                <button onclick="setSleepTimer(60); closePlayerTools()" class="p-4 rounded-xl bg-white/5 hover:bg-white/10 text-left"><b>60 perc</b><span class="block text-xs text-spotify-subtext mt-1">Alvásidőzítő</span></button>
+                <button onclick="clearSleepTimer(); closePlayerTools()" class="p-4 rounded-xl bg-white/5 hover:bg-white/10 text-left"><b>Időzítő törlése</b><span class="block text-xs text-spotify-subtext mt-1">Leállítás kikapcsolása</span></button>
+                <button onclick="requestWakeLock(); closePlayerTools()" class="p-4 rounded-xl bg-white/5 hover:bg-white/10 text-left"><b>Képernyő ébren</b><span class="block text-xs text-spotify-subtext mt-1">Amíg a böngésző engedi</span></button>
+                <button onclick="openApiKeyDialog(); closePlayerTools()" class="p-4 rounded-xl bg-white/5 hover:bg-white/10 text-left"><b>YouTube API</b><span class="block text-xs text-spotify-subtext mt-1">Kulcs beállítása</span></button>
+            </div>
+            <div id="sleep-status" class="text-xs text-spotify-green mt-4"></div>
+            <p class="text-[11px] text-spotify-subtext mt-4 leading-relaxed">
+                iPhone-on a YouTube háttérlejátszást egy sima HTML/iframe alkalmazás nem tudja megbízhatóan kikényszeríteni.
+                A Media Session gombokat és a natív audio funkciókat viszont bekapcsoltuk; valódi lezárt képernyős YouTube-lejátszáshoz natív iOS wrapper vagy saját backend szükséges.
+            </p>
+        </div>
+    </div>
+
+    <!-- API key dialog -->
+    <div id="api-key-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[70] hidden items-center justify-center p-4">
+        <div class="bg-spotify-card border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 class="text-lg font-bold mb-2">YouTube Data API kulcs</h3>
+            <p class="text-xs text-spotify-subtext mb-4">A kulcsot csak ezen az eszközön, localStorage-ban tároljuk. Publikus HTML-be éles környezetben ne tegyél titkos kulcsot.</p>
+            <input id="youtube-api-key-input" type="password" placeholder="AIza..." class="w-full bg-spotify-cardHover text-white p-3 rounded-xl border border-white/10 focus:border-spotify-green focus:outline-none">
+            <div class="flex justify-end gap-2 mt-4">
+                <button onclick="closeApiKeyDialog()" class="px-4 py-2 rounded-full text-sm hover:bg-white/5">Mégse</button>
+                <button onclick="saveApiKey()" class="px-5 py-2 rounded-full bg-spotify-green text-black font-bold text-sm">Mentés</button>
+            </div>
+        </div>
+    </div>
+
+<audio id="audio-engine" preload="metadata"></audio>
+
+    <script>
+        const YOUTUBE_API_KEY_STORAGE = "streamify_youtube_api_key";
+
+        let allTracks = [
+            {
+                id: "track-1",
+                title: "Cyberpunk Synthwave",
+                artist: "Retro Wave",
+                album: "Neon Dreams",
+                duration: "2:15",
+                durationSec: 135,
+                cover: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&auto=format&fit=crop&q=80",
+                url: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a7331d.mp3?filename=synthwave-80s-110045.mp3",
+                isYouTube: false
+            },
+            {
+                id: "track-2",
+                title: "Lo-Fi Beats to Relax",
+                artist: "Chill Hop",
+                album: "Midnight Coffee",
+                duration: "2:40",
+                durationSec: 160,
+                cover: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=400&auto=format&fit=crop&q=80",
+                url: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3",
+                isYouTube: false
+            }
+        ];
+
+        let state = {
+            currentTrackIndex: 0,
+            isPlaying: false,
+            isShuffle: false,
+            isRepeat: false,
+            volume: 0.8,
+            isMuted: false,
+            likedTrackIds: new Set(JSON.parse(localStorage.getItem('likedTracks') || '[]')),
+            userPlaylists: JSON.parse(localStorage.getItem('userPlaylists') || '[]'),
+            customSavedYouTubeTracks: JSON.parse(localStorage.getItem('customYouTubeTracks') || '[]'),
+            currentPlaylistId: 'liked',
+            activeView: 'home',
+            timerInterval: null,
+            sleepTimer: null,
+            sleepTimerEnd: null,
+            lastVolume: parseFloat(localStorage.getItem('streamify_volume') || '0.8'),
+            recentlyPlayed: JSON.parse(localStorage.getItem('streamify_recent') || '[]'),
+            queue: JSON.parse(localStorage.getItem('streamify_queue') || '[]'),
+            wakeLock: null
+        };
+
+        function getCombinedTracks() {
+            return [...allTracks, ...state.customSavedYouTubeTracks];
+        }
+
+        const audio = document.getElementById('audio-engine');
+        const playBtn = document.getElementById('btn-play');
+        const seekSlider = document.getElementById('seek-slider');
+        const volumeSlider = document.getElementById('volume-slider');
+        const currentTimeEl = document.getElementById('player-current-time');
+        const durationEl = document.getElementById('player-duration');
+        const trackTitleEl = document.getElementById('player-track-title');
+        const artistNameEl = document.getElementById('player-artist-name');
+        const albumArtEl = document.getElementById('player-album-art');
+        const likeBtn = document.getElementById('player-like-btn');
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderQuickPicks();
+            renderFeaturedGrid();
+            renderLibraryList();
+            renderSearchTracks(getCombinedTracks());
+            loadTrack(0, false);
+            
+            audio.addEventListener('timeupdate', updateProgress);
+            audio.addEventListener('ended', handleTrackEnded);
+            audio.addEventListener('loadedmetadata', () => {
+                const tracks = getCombinedTracks();
+                durationEl.textContent = formatTime(audio.duration || tracks[state.currentTrackIndex]?.durationSec || 180);
+            });
+
+            setupMediaSession();
+        });
+
+        function saveState() {
+            localStorage.setItem('likedTracks', JSON.stringify([...state.likedTrackIds]));
+            localStorage.setItem('userPlaylists', JSON.stringify(state.userPlaylists));
+            localStorage.setItem('customYouTubeTracks', JSON.stringify(state.customSavedYouTubeTracks));
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return "0:00";
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        function setupMediaSession() {
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.setActionHandler('play', () => togglePlayPause());
+                navigator.mediaSession.setActionHandler('pause', () => togglePlayPause());
+                navigator.mediaSession.setActionHandler('previoustrack', () => playPreviousTrack());
+                navigator.mediaSession.setActionHandler('nexttrack', () => playNextTrack());
+                try { navigator.mediaSession.setActionHandler('seekbackward', () => seekRelative(-10)); } catch(e) {}
+                try { navigator.mediaSession.setActionHandler('seekforward', () => seekRelative(10)); } catch(e) {}
+                try { navigator.mediaSession.setActionHandler('stop', () => pauseAudio()); } catch(e) {}
+            }
+        }
+
+        function updateMediaSessionMeta(title, artist, artworkUrl) {
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: title,
+                    artist: artist,
+                    album: 'Streamify Pro',
+                    artwork: [{ src: artworkUrl, sizes: '512x512', type: 'image/jpeg' }]
+                });
+            }
+        }
+
+        function loadTrack(index, autoPlay = true) {
+            const tracks = getCombinedTracks();
+            if (index < 0 || index >= tracks.length) return;
+            state.currentTrackIndex = index;
+            const track = tracks[index];
+
+            state.recentlyPlayed = [track.id, ...state.recentlyPlayed.filter(id => id !== track.id)].slice(0, 30);
+            localStorage.setItem('streamify_recent', JSON.stringify(state.recentlyPlayed));
+
+            trackTitleEl.textContent = track.title;
+            artistNameEl.textContent = track.artist;
+            albumArtEl.src = track.cover;
+            
+            if (state.timerInterval) clearInterval(state.timerInterval);
+
+            const floatBox = document.getElementById('youtube-float-box');
+            const floatIframe = document.getElementById('youtube-float-iframe');
+
+            if (track.isYouTube) {
+                audio.pause();
+                audio.src = "";
+                floatBox.classList.remove('hidden');
+                floatIframe.src = `https://www.youtube.com/embed/${track.videoId}?autoplay=1&enablejsapi=1&playsinline=1&rel=0`;
+                document.getElementById('yt-float-title').textContent = track.title;
+
+                let sec = 0;
+                seekSlider.value = 0;
+                durationEl.textContent = track.duration;
+                state.timerInterval = setInterval(() => {
+                    if (state.isPlaying) {
+                        sec++;
+                        currentTimeEl.textContent = formatTime(sec);
+                        seekSlider.value = (sec / track.durationSec) * 100;
+                        if (sec >= track.durationSec) playNextTrack();
+                    }
+                }, 1000);
+            } else {
+                floatBox.classList.add('hidden');
+                floatIframe.src = "";
+                audio.src = track.url;
+            }
+            
+            updateLikeButtonIcon();
+            updateMediaSessionMeta(track.title, track.artist, track.cover);
+
+            if (autoPlay) {
+                playAudio();
+            } else {
+                pauseAudio();
+            }
+        }
+
+        function closeYouTubeFloat() {
+            document.getElementById('youtube-float-box').classList.add('hidden');
+            document.getElementById('youtube-float-iframe').src = "";
+        }
+
+        function playAudio() {
+            const tracks = getCombinedTracks();
+            const track = tracks[state.currentTrackIndex];
+            if (!track.isYouTube) {
+                audio.play().catch(e => console.warn(e));
+            }
+            state.isPlaying = true;
+            playBtn.innerHTML = `<i class="fa-solid fa-pause text-base"></i>`;
+            highlightActiveRow();
+        }
+
+        function pauseAudio() {
+            const tracks = getCombinedTracks();
+            const track = tracks[state.currentTrackIndex];
+            if (!track.isYouTube) {
+                audio.pause();
+            } else {
+                // Az iframe-et nem töröljük pause-nál, így a YouTube állapota megmarad.
+                // A valódi pause a YouTube IFrame API-val vezérelhető, ha elérhető.
+                try {
+                    document.getElementById('youtube-float-iframe').contentWindow.postMessage(
+                        JSON.stringify({event: 'command', func: 'pauseVideo', args: []}), '*'
+                    );
+                } catch(e) {}
+            }
+            state.isPlaying = false;
+            playBtn.innerHTML = `<i class="fa-solid fa-play ml-0.5 text-base"></i>`;
+            highlightActiveRow();
+        }
+
+        function togglePlayPause() {
+            if (state.isPlaying) {
+                pauseAudio();
+            } else {
+                playAudio();
+            }
+        }
+
+        function playNextTrack() {
+            const tracks = getCombinedTracks();
+            if (state.queue.length) {
+                const nextId = state.queue.shift();
+                localStorage.setItem('streamify_queue', JSON.stringify(state.queue));
+                const idx = tracks.findIndex(t => t.id === nextId);
+                if (idx >= 0) return loadTrack(idx, true);
+            }
+            if (state.isShuffle) {
+                loadTrack(Math.floor(Math.random() * tracks.length));
+            } else {
+                loadTrack((state.currentTrackIndex + 1) % tracks.length);
+            }
+        }
+
+        function playPreviousTrack() {
+            const tracks = getCombinedTracks();
+            loadTrack((state.currentTrackIndex - 1 + tracks.length) % tracks.length);
+        }
+
+        function handleTrackEnded() {
+            if (state.isRepeat) {
+                loadTrack(state.currentTrackIndex, true);
+            } else {
+                playNextTrack();
+            }
+        }
+
+        function updateProgress() {
+            const tracks = getCombinedTracks();
+            const track = tracks[state.currentTrackIndex];
+            if (!track?.isYouTube && !isNaN(audio.duration) && audio.duration > 0) {
+                seekSlider.value = (audio.currentTime / audio.duration) * 100;
+                currentTimeEl.textContent = formatTime(audio.currentTime);
+                durationEl.textContent = formatTime(audio.duration);
+            }
+        }
+
+        function handleSeek(value) {
+            const tracks = getCombinedTracks();
+            const track = tracks[state.currentTrackIndex];
+            if (!track?.isYouTube && !isNaN(audio.duration) && audio.duration > 0) {
+                audio.currentTime = (value / 100) * audio.duration;
+            }
+        }
+
+        function handleVolumeChange(value) {
+            state.volume = parseFloat(value);
+            state.lastVolume = state.volume;
+            audio.volume = state.volume;
+            localStorage.setItem('streamify_volume', String(state.volume));
+            state.isMuted = state.volume === 0;
+            updateMuteIcon();
+        }
+
+        function toggleMute() {
+            state.isMuted = !state.isMuted;
+            audio.muted = state.isMuted;
+            updateMuteIcon();
+        }
+
+        function updateMuteIcon() {
+            const btn = document.getElementById('btn-mute');
+            if (!btn) return;
+            btn.innerHTML = state.isMuted
+                ? '<i class="fa-solid fa-volume-xmark"></i>'
+                : (state.volume < 0.5 ? '<i class="fa-solid fa-volume-low"></i>' : '<i class="fa-solid fa-volume-high"></i>');
+        }
+
+        function toggleShuffle() {
+            state.isShuffle = !state.isShuffle;
+            document.getElementById('btn-shuffle').classList.toggle('text-spotify-green', state.isShuffle);
+        }
+
+        function toggleRepeat() {
+            state.isRepeat = !state.isRepeat;
+            document.getElementById('btn-repeat').classList.toggle('text-spotify-green', state.isRepeat);
+        }
+
+        function toggleCurrentLike() {
+            const tracks = getCombinedTracks();
+            const track = tracks[state.currentTrackIndex];
+            if (track) toggleLikeTrack(track.id);
+        }
+
+        function toggleLikeTrack(trackId) {
+            if (state.likedTrackIds.has(trackId)) {
+                state.likedTrackIds.delete(trackId);
+            } else {
+                state.likedTrackIds.add(trackId);
+            }
+            saveState();
+            updateLikeButtonIcon();
+            renderLibraryList();
+            if (state.currentPlaylistId === 'liked') renderPlaylistView('liked');
+            renderSearchTracks(getCombinedTracks());
+        }
+
+        function updateLikeButtonIcon() {
+            const tracks = getCombinedTracks();
+            const track = tracks[state.currentTrackIndex];
+            const isLiked = track ? state.likedTrackIds.has(track.id) : false;
+            likeBtn.innerHTML = isLiked ? `<i class="fa-solid fa-heart text-spotify-green text-lg"></i>` : `<i class="fa-regular fa-heart text-lg"></i>`;
+        }
+
+        function saveYouTubeToLibrary(videoId, title, channel, thumbUrl) {
+            const existingId = 'yt-' + videoId;
+            if (!state.customSavedYouTubeTracks.some(t => t.id === existingId)) {
+                const newTrack = {
+                    id: existingId,
+                    title: title,
+                    artist: channel,
+                    album: 'YouTube Music',
+                    duration: '3:30',
+                    durationSec: 210,
+                    cover: thumbUrl || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&auto=format&fit=crop&q=80',
+                    videoId: videoId,
+                    isYouTube: true
+                };
+                state.customSavedYouTubeTracks.push(newTrack);
+                state.likedTrackIds.add(existingId);
+                saveState();
+                renderLibraryList();
+                renderSearchTracks(getCombinedTracks());
+                alert('Zene sikeresen elmentve a Könyvtáradba (Liked Songs)!');
+            } else {
+                alert('Ez a zene már benne van a könyvtáradban!');
+            }
+        }
+
+        function openCreatePlaylistModal() { document.getElementById('playlist-modal').classList.remove('hidden'); }
+        function closeCreatePlaylistModal() { document.getElementById('playlist-modal').classList.add('hidden'); }
+        
+        function confirmCreatePlaylist() {
+            const name = document.getElementById('playlist-name-input').value.trim();
+            if (name) {
+                state.userPlaylists.push({ id: 'playlist-' + Date.now(), name, tracks: [] });
+                saveState();
+                renderLibraryList();
+                closeCreatePlaylistModal();
+            }
+        }
+
+        function switchView(viewName) {
+            state.activeView = viewName;
+            document.querySelectorAll('.view-content').forEach(el => el.classList.add('hidden'));
+            if (viewName === 'home') document.getElementById('view-home').classList.remove('hidden');
+            else if (viewName === 'search') document.getElementById('view-search').classList.remove('hidden');
+            else if (viewName === 'playlist' || viewName === 'library') {
+                document.getElementById('view-playlist').classList.remove('hidden');
+                if (viewName === 'library') renderPlaylistView('liked');
+            }
+        }
+
+        function renderQuickPicks() {
+            const grid = document.getElementById('quick-pick-grid');
+            grid.innerHTML = '';
+            getCombinedTracks().slice(0, 6).forEach((track, idx) => {
+                const card = document.createElement('div');
+                card.className = "bg-spotify-card/80 hover:bg-spotify-cardHover rounded-xl flex items-center gap-4 overflow-hidden cursor-pointer group transition shadow-md border border-white/5";
+                card.onclick = () => loadTrack(idx, true);
+                card.innerHTML = `<img src="${track.cover}" class="w-16 h-16 object-cover"><span class="font-bold text-sm truncate flex-1 text-white">${track.title}</span><button class="w-10 h-10 rounded-full bg-spotify-green text-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition mr-3 shadow-xl"><i class="fa-solid fa-play ml-0.5"></i></button>`;
+                grid.appendChild(card);
+            });
+        }
+
+        function renderFeaturedGrid() {
+            const grid = document.getElementById('featured-tracks-grid');
+            grid.innerHTML = '';
+            getCombinedTracks().forEach((track, idx) => {
+                const card = document.createElement('div');
+                card.className = "bg-spotify-card p-4 rounded-2xl hover:bg-spotify-cardHover transition cursor-pointer flex flex-col justify-between group shadow-lg border border-white/5";
+                card.onclick = () => loadTrack(idx, true);
+                card.innerHTML = `<div class="relative mb-3"><img src="${track.cover}" class="w-full aspect-square object-cover rounded-xl shadow-md"><button class="w-12 h-12 rounded-full bg-spotify-green text-black flex items-center justify-center absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition shadow-2xl"><i class="fa-solid fa-play ml-0.5"></i></button></div><h3 class="font-bold text-sm truncate mb-1 text-white">${track.title}</h3><p class="text-xs text-spotify-subtext truncate">${track.artist}</p>`;
+                grid.appendChild(card);
+            });
+        }
+
+        function renderLibraryList() {
+            const container = document.getElementById('library-list');
+            container.innerHTML = '';
+            const likedItem = document.createElement('div');
+            likedItem.className = "flex items-center gap-3 p-2.5 rounded-xl hover:bg-spotify-cardHover cursor-pointer transition";
+            likedItem.onclick = () => renderPlaylistView('liked');
+            likedItem.innerHTML = `<div class="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-800 flex items-center justify-center shadow-md"><i class="fa-solid fa-heart text-white"></i></div><div class="overflow-hidden"><h4 class="text-sm font-semibold truncate text-white">Liked Songs</h4><p class="text-xs text-spotify-subtext">${state.likedTrackIds.size} dal</p></div>`;
+            container.appendChild(likedItem);
+
+            state.userPlaylists.forEach(pl => {
+                const item = document.createElement('div');
+                item.className = "flex items-center gap-3 p-2.5 rounded-xl hover:bg-spotify-cardHover cursor-pointer transition";
+                item.onclick = () => renderPlaylistView(pl.id);
+                item.innerHTML = `<div class="w-12 h-12 rounded-lg bg-spotify-cardHover flex items-center justify-center shadow-md"><i class="fa-solid fa-music text-spotify-subtext"></i></div><div class="overflow-hidden"><h4 class="text-sm font-semibold truncate text-white">${pl.name}</h4><p class="text-xs text-spotify-subtext">${pl.tracks.length} dal</p></div>`;
+                container.appendChild(item);
+            });
+        }
+
+        function filterLibrary(type) {
+            if (type === 'liked') renderPlaylistView('liked');
+            else renderLibraryList();
+        }
+
+        function renderPlaylistView(playlistId) {
+            state.currentPlaylistId = playlistId;
+            switchView('playlist');
+            let title = "", desc = "", tracks = [];
+            const allTr = getCombinedTracks();
+            if (playlistId === 'liked') {
+                title = "Liked Songs"; desc = "Kedvenc elmentett zenéid gyűjteménye";
+                tracks = allTr.filter(t => state.likedTrackIds.has(t.id));
+                document.getElementById('playlist-cover').innerHTML = `<div class="w-full h-full bg-gradient-to-br from-indigo-700 to-purple-900 flex items-center justify-center"><i class="fa-solid fa-heart text-6xl text-white"></i></div>`;
+            } else {
+                const pl = state.userPlaylists.find(p => p.id === playlistId);
+                if (pl) {
+                    title = pl.name; desc = "Saját lejátszási lista";
+                    tracks = allTr.filter(t => pl.tracks.includes(t.id));
+                    document.getElementById('playlist-cover').innerHTML = `<div class="w-full h-full bg-spotify-cardHover flex items-center justify-center"><i class="fa-solid fa-music text-6xl text-spotify-subtext"></i></div>`;
+                }
+            }
+            document.getElementById('playlist-title').textContent = title;
+            document.getElementById('playlist-description').textContent = desc;
+            document.getElementById('playlist-track-count').textContent = `${tracks.length} dal`;
+
+            const tbody = document.getElementById('playlist-tracks-list');
+            tbody.innerHTML = tracks.length === 0 ? `<tr><td colspan="5" class="py-8 text-center text-spotify-subtext">Még nincsenek zenék itt.</td></tr>` : '';
+            tracks.forEach((track, idx) => {
+                tbody.appendChild(createTrackRow(track, idx + 1, allTr.findIndex(t => t.id === track.id)));
+            });
+            highlightActiveRow();
+        }
+
+        function renderSearchTracks(tracks) {
+            const tbody = document.getElementById('search-tracks-list');
+            tbody.innerHTML = '';
+            tracks.forEach((track, idx) => {
+                tbody.appendChild(createTrackRow(track, idx + 1, idx));
+            });
+            highlightActiveRow();
+        }
+
+        function createTrackRow(track, displayIndex, globalIndex) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-white/10 transition group cursor-pointer track-row";
+            tr.dataset.index = globalIndex;
+            const isLiked = state.likedTrackIds.has(track.id);
+            tr.innerHTML = `
+                <td class="py-3 px-2 text-center text-spotify-subtext font-mono" onclick="loadTrack(${globalIndex}, true)"><span class="row-num">${displayIndex}</span></td>
+                <td class="py-3 px-2" onclick="loadTrack(${globalIndex}, true)"><div class="flex items-center gap-3"><img src="${track.cover}" class="w-10 h-10 rounded-lg object-cover shadow"><div><p class="font-semibold text-white truncate max-w-xs">${track.title}</p><p class="text-xs text-spotify-subtext truncate">${track.artist}</p></div></div></td>
+                <td class="py-3 px-2 text-spotify-subtext hidden md:table-cell truncate max-w-[150px]" onclick="loadTrack(${globalIndex}, true)">${track.album}</td>
+                <td class="py-3 px-2 text-center text-spotify-subtext font-mono text-xs">${track.duration}</td>
+                <td class="py-3 px-2 text-right"><div class="flex items-center gap-3 justify-end"><button onclick="event.stopPropagation(); toggleLikeTrack('${track.id}')" class="text-spotify-subtext hover:text-spotify-green transition"><i class="${isLiked ? 'fa-solid fa-heart text-spotify-green' : 'fa-regular fa-heart'} text-base"></i></button></div></td>`;
+            return tr;
+        }
+
+        function highlightActiveRow() {
+            document.querySelectorAll('.track-row').forEach(row => {
+                const idx = parseInt(row.dataset.index);
+                if (idx === state.currentTrackIndex) row.classList.add('bg-white/10');
+                else row.classList.remove('bg-white/10');
+            });
+        }
+
+        function handleSearch(query) {
+            const q = query.toLowerCase().trim();
+            const allTr = getCombinedTracks();
+            if (!q) { renderSearchTracks(allTr); return; }
+            renderSearchTracks(allTr.filter(t => t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q)));
+            if (state.activeView !== 'search') switchView('search');
+        }
+
+
+        function seekRelative(seconds) {
+            const tracks = getCombinedTracks();
+            const track = tracks[state.currentTrackIndex];
+            if (!track || track.isYouTube || !Number.isFinite(audio.duration)) return;
+            audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + seconds));
+        }
+
+        function openPlayerTools() {
+            const el = document.getElementById('player-tools-modal');
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+        }
+        function closePlayerTools() {
+            const el = document.getElementById('player-tools-modal');
+            el.classList.add('hidden');
+            el.classList.remove('flex');
+        }
+
+        function setSleepTimer(minutes) {
+            clearSleepTimer();
+            state.sleepTimerEnd = Date.now() + minutes * 60000;
+            state.sleepTimer = setTimeout(() => {
+                pauseAudio();
+                state.sleepTimer = null;
+                state.sleepTimerEnd = null;
+                document.getElementById('sleep-status').textContent = 'Az alvásidőzítő lejárt.';
+            }, minutes * 60000);
+            document.getElementById('sleep-status').textContent = `Alvásidőzítő: ${minutes} perc.`;
+        }
+
+        function clearSleepTimer() {
+            if (state.sleepTimer) clearTimeout(state.sleepTimer);
+            state.sleepTimer = null;
+            state.sleepTimerEnd = null;
+            const el = document.getElementById('sleep-status');
+            if (el) el.textContent = '';
+        }
+
+        async function requestWakeLock() {
+            if (!('wakeLock' in navigator)) {
+                alert('A böngésző nem támogatja a Screen Wake Lock funkciót.');
+                return;
+            }
+            try {
+                state.wakeLock = await navigator.wakeLock.request('screen');
+                alert('A képernyő ébren tartása bekapcsolva.');
+            } catch (e) {
+                alert('A képernyő ébren tartása nem engedélyezett.');
+            }
+        }
+
+        function openApiKeyDialog() {
+            const el = document.getElementById('api-key-modal');
+            document.getElementById('youtube-api-key-input').value =
+                localStorage.getItem(YOUTUBE_API_KEY_STORAGE) || '';
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+        }
+        function closeApiKeyDialog() {
+            const el = document.getElementById('api-key-modal');
+            el.classList.add('hidden');
+            el.classList.remove('flex');
+        }
+        function saveApiKey() {
+            const key = document.getElementById('youtube-api-key-input').value.trim();
+            if (key) localStorage.setItem(YOUTUBE_API_KEY_STORAGE, key);
+            else localStorage.removeItem(YOUTUBE_API_KEY_STORAGE);
+            closeApiKeyDialog();
+            alert(key ? 'YouTube API-kulcs elmentve.' : 'YouTube API-kulcs törölve.');
+        }
+
+        function getYouTubeApiKey() {
+            return localStorage.getItem(YOUTUBE_API_KEY_STORAGE) || '';
+        }
+
+        function toggleFullscreenPlayer() {
+            const el = document.getElementById('youtube-float-box');
+            if (!document.fullscreenElement) el.requestFullscreen?.();
+            else document.exitFullscreen?.();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+            if (e.code === 'Space') { e.preventDefault(); togglePlayPause(); }
+            if (e.code === 'ArrowLeft') seekRelative(-5);
+            if (e.code === 'ArrowRight') seekRelative(5);
+            if (e.code === 'ArrowUp') { e.preventDefault(); handleVolumeChange(Math.min(1, state.volume + 0.05)); volumeSlider.value = state.volume; }
+            if (e.code === 'ArrowDown') { e.preventDefault(); handleVolumeChange(Math.max(0, state.volume - 0.05)); volumeSlider.value = state.volume; }
+            if (e.key.toLowerCase() === 'm') toggleMute();
+            if (e.key.toLowerCase() === 'n') playNextTrack();
+            if (e.key.toLowerCase() === 'p') playPreviousTrack();
+        });
+
+        document.addEventListener('visibilitychange', async () => {
+            // Natív audio esetén visszaállítjuk a Media Session-t; iOS-en a YouTube iframe
+            // háttérben történő futását a böngésző szabályozza.
+            if (document.visibilityState === 'visible' && state.isPlaying && state.wakeLock === null) {
+                // no-op, szándékosan: nem indítunk automatikusan új lejátszást
+            }
+        });
+
+        let youtubeNextPageToken = '', youtubeLastQuery = '';
+
+        async function searchYouTube(newSearch = true) {
+            const query = document.getElementById('youtube-search-input').value.trim();
+            const status = document.getElementById('youtube-search-status');
+            const results = document.getElementById('youtube-results');
+            const moreBtn = document.getElementById('youtube-more-btn');
+            const apiKey = getYouTubeApiKey().trim();
+
+            if (!apiKey || apiKey === "IDE_IRAD_AZ_API_KULCSODAT") {
+                status.innerHTML = 'Nincs YouTube API-kulcs. <button onclick="openApiKeyDialog()" class="underline text-spotify-green">Beállítom</button>';
+                return;
+            }
+            if (!query) { status.textContent = 'Írd be a keresendő dalt.'; return; }
+            if (newSearch) { youtubeLastQuery = query; youtubeNextPageToken = ''; results.innerHTML = ''; }
+
+            status.textContent = 'Keresés a YouTube-on...';
+            moreBtn.classList.add('hidden');
+            try {
+                const params = new URLSearchParams({part:'snippet', type:'video', videoCategoryId:'10', maxResults:'12', q:query, regionCode:'HU', key:apiKey});
+                if (!newSearch && youtubeNextPageToken) params.set('pageToken', youtubeNextPageToken);
+                const res = await fetch('https://www.googleapis.com/youtube/v3/search?' + params.toString());
+                const data = await res.json();
+                if (!res.ok) throw new Error(data?.error?.message || 'Hiba történt.');
+                youtubeNextPageToken = data.nextPageToken || '';
+                const items = data.items || [];
+
+                items.forEach(item => {
+                    const videoId = item.id.videoId, title = item.snippet.title, channel = item.snippet.channelTitle;
+                    const thumb = item.snippet.thumbnails.medium.url;
+                    const card = document.createElement('article');
+                    card.className = 'bg-spotify-card rounded-2xl overflow-hidden border border-white/5 hover:bg-spotify-cardHover transition shadow-lg flex flex-col justify-between';
+                    card.innerHTML = `
+                        <div>
+                            <img src="${thumb}" class="w-full aspect-video object-cover bg-black">
+                            <div class="p-3">
+                                <h4 class="font-semibold text-sm truncate text-white">${title}</h4>
+                                <p class="text-xs text-spotify-subtext mt-1 truncate">${channel}</p>
+                            </div>
+                        </div>
+                        <div class="p-3 pt-0 flex gap-2">
+                            <button onclick="playYouTubeVideo('${videoId}', '${title.replace(/'/g, "")}', '${channel.replace(/'/g, "")}', '${thumb}')" class="flex-1 rounded-xl bg-spotify-green text-black font-bold text-xs py-2.5 hover:bg-spotify-greenHover transition shadow"><i class="fa-solid fa-play mr-1.5"></i>Lejátszás</button>
+                            <button onclick="addYouTubeToQueue('${videoId}', '${title.replace(/'/g, "")}', '${channel.replace(/'/g, "")}', '${thumb}')" class="rounded-xl bg-white/10 text-white px-3 py-2.5 hover:bg-white/20 transition shadow" title="Sorba"><i class="fa-solid fa-list"></i></button>
+                            <button onclick="saveYouTubeToLibrary('${videoId}', '${title.replace(/'/g, "")}', '${channel.replace(/'/g, "")}', '${thumb}')" class="rounded-xl bg-white/10 text-white px-3 py-2.5 hover:bg-white/20 transition shadow" title="Mentés"><i class="fa-solid fa-plus"></i></button>
+                        </div>`;
+                    results.appendChild(card);
+                });
+                status.textContent = `${items.length} találat betöltve.`;
+                if (youtubeNextPageToken) moreBtn.classList.remove('hidden');
+            } catch (err) {
+                status.textContent = 'Hiba: ' + err.message;
+            }
+        }
+
+
+        function addYouTubeToQueue(videoId, title, channel, thumbUrl) {
+            const track = {
+                id: 'yt-' + videoId,
+                title, artist: channel, album: 'YouTube Music',
+                duration: '3:30', durationSec: 210, cover: thumbUrl,
+                videoId, isYouTube: true
+            };
+            const existing = getCombinedTracks().find(t => t.videoId === videoId);
+            const id = existing ? existing.id : track.id;
+            if (!state.queue.includes(id)) state.queue.push(id);
+            localStorage.setItem('streamify_queue', JSON.stringify(state.queue));
+            alert('A dal bekerült a lejátszási sorba.');
+        }
+
+        function playYouTubeVideo(videoId, title, channel, thumbUrl) {
+            const tempTrack = {
+                id: 'yt-' + videoId,
+                title: title,
+                artist: channel,
+                album: 'YouTube Music',
+                duration: '3:30',
+                durationSec: 210,
+                cover: thumbUrl,
+                videoId: videoId,
+                isYouTube: true
+            };
+            
+            let tracks = getCombinedTracks();
+            let idx = tracks.findIndex(t => t.videoId === videoId);
+            if (idx === -1) {
+                state.customSavedYouTubeTracks.push(tempTrack);
+                idx = getCombinedTracks().length - 1;
+            }
+            loadTrack(idx, true);
+        }
+    </script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+      }
+    </script>
+</body>
+</html>
