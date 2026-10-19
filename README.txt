@@ -1,20 +1,21 @@
-Streamify – GitHub Pages csomag
+Streamify Mobile Pro
 
-Fájlok:
-- index.html
-- manifest.json
-- sw.js
+Telefonra optimalizált GitHub Pages verzió:
+- mobil alsó navigáció
+- modern mini-lejátszó
+- extrák panel
+- alvásidőzítő
+- képernyő-ébrentartás, ha az iOS engedi
+- megosztás
+- shuffle/queue gyorsvezérlők
+- PWA metaadatok
+- beépített YouTube API-kulcs
 
-A YouTube API-kulcs be van építve az index.html-be.
+FONTOS: a YouTube IFrame Player API-val az iOS lezárt képernyős/háttérben futó YouTube-hangja
+nem garantálható. A YouTube iframe-et nem szabad elrejteni vagy más módszerrel megkerülni az
+iOS/YouTube háttérlejátszási korlátozásait. A valódi, megbízható háttérhanghoz saját vagy
+engedélyezett közvetlen audioforrás (<audio>) szükséges, illetve a YouTube saját alkalmazása
+által támogatott háttérlejátszás.
 
-FONTOS:
-A böngészőben használt API-kulcs nyilvánosan látható lesz. A Google Cloud Console-ban érdemes
-HTTP referrer korlátozást beállítani a saját GitHub Pages domainedre, és csak a szükséges
-YouTube Data API jogosultságot engedélyezni.
-
-iOS háttérlejátszás:
-A Streamify YouTube iframe-es lejátszást használ. GitHub Pages statikus tárhely, és a YouTube
-IFrame Player API nem ad garantált iOS háttérlejátszást/lezárt képernyős lejátszást. Ezt nem lehet
-megbízhatóan megoldani egy egyszerű JavaScript-kóddal vagy az iframe elrejtésével.
-
-A csomag a hivatalos YouTube IFrame Player API-t használja.
+Az API-kulcs nyilvánosan látható lesz az index.html-ben; Google Cloudban korlátozd a kulcsot
+a saját GitHub Pages domainre.

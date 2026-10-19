@@ -1016,5 +1016,205 @@
         window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
       }
     </script>
+
+<style id="streamify-mobile-pro">
+/* Streamify Mobile Pro — phone-first UI */
+html, body { width:100%; height:100%; overscroll-behavior:none; }
+body { -webkit-tap-highlight-color:transparent; }
+button, input { touch-action:manipulation; }
+#app { min-height:100dvh; }
+@supports (padding: env(safe-area-inset-bottom)) {
+  body { padding-bottom: env(safe-area-inset-bottom); }
+}
+@media (max-width: 767px) {
+  body { overflow:hidden; }
+  #app { height:100dvh; }
+  #sidebar { display:none !important; }
+  main { width:100% !important; }
+  main > div { padding:8px 10px 92px !important; }
+  .mobile-bottom-nav { display:flex !important; }
+  .mobile-topbar { display:flex !important; }
+  #float-box { width:calc(100vw - 20px) !important; left:10px !important; right:10px !important; bottom:82px !important; }
+  #youtube-float-iframe { width:100% !important; height:100% !important; }
+  .yt-mobile-warning { display:block !important; }
+  .mobile-player-sheet { display:block !important; }
+  .desktop-only { display:none !important; }
+  .mobile-card { border-radius:22px; }
+}
+.mobile-bottom-nav {
+  display:none;
+  position:fixed; z-index:80; left:8px; right:8px; bottom:8px;
+  height:68px; padding:7px 10px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(10,10,10,.88);
+  backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px);
+  border-radius:24px; box-shadow:0 10px 40px rgba(0,0,0,.45);
+  align-items:center; justify-content:space-around;
+}
+.mobile-bottom-nav button { flex:1; color:#9ca3af; font-size:10px; font-weight:700; }
+.mobile-bottom-nav i { display:block; font-size:19px; margin-bottom:3px; }
+.mobile-bottom-nav .active { color:#1ed760; }
+.mobile-topbar {
+  display:none; position:sticky; top:0; z-index:40;
+  align-items:center; justify-content:space-between;
+  padding:10px 2px 12px;
+}
+.mobile-brand { font-size:21px; font-weight:900; letter-spacing:-.7px; }
+.mobile-brand span { color:#1ed760; }
+.mobile-actions { display:flex; gap:8px; }
+.mobile-actions button {
+  width:40px; height:40px; border-radius:50%;
+  background:rgba(255,255,255,.07); color:white;
+}
+.modern-player-bar {
+  position:fixed; left:10px; right:10px; bottom:84px; z-index:70;
+  display:none; border-radius:20px; overflow:hidden;
+  background:rgba(30,30,30,.94); border:1px solid rgba(255,255,255,.08);
+  backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+}
+.modern-player-bar.show { display:block; }
+.modern-player-main { display:flex; align-items:center; gap:10px; padding:9px 11px; }
+.modern-art {
+  width:45px; height:45px; border-radius:9px; object-fit:cover; background:#222;
+}
+.modern-meta { min-width:0; flex:1; }
+.modern-title { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:13px; font-weight:800; }
+.modern-sub { color:#9ca3af; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.modern-controls { display:flex; align-items:center; gap:5px; }
+.modern-controls button { width:34px; height:34px; border-radius:50%; }
+.modern-progress { height:2px; background:#444; }
+.modern-progress > div { height:100%; width:0; background:#1ed760; transition:width .15s linear; }
+.yt-mobile-warning {
+  display:none; margin:8px 0 0; padding:9px 11px; border-radius:13px;
+  background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.2);
+  color:#fbbf24; font-size:11px; line-height:1.35;
+}
+.feature-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+@media (min-width:768px) { .feature-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+.feature-tile {
+  min-height:86px; border-radius:18px; padding:14px;
+  background:linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.025));
+  border:1px solid rgba(255,255,255,.06);
+}
+.feature-tile i { font-size:20px; margin-bottom:9px; }
+.feature-tile b { display:block; font-size:13px; }
+.feature-tile small { color:#9ca3af; font-size:10px; }
+</style>
+
+<!-- Mobile navigation -->
+<nav class="mobile-bottom-nav" aria-label="Mobil navigáció">
+  <button class="active" onclick="try{showView('home')}catch(e){}"><i class="fa-solid fa-house"></i>Kezdőlap</button>
+  <button onclick="try{showView('search')}catch(e){}"><i class="fa-solid fa-magnifying-glass"></i>Keresés</button>
+  <button onclick="try{showView('library')}catch(e){}"><i class="fa-solid fa-book-open"></i>Könyvtár</button>
+  <button onclick="openMobileFeatures()"><i class="fa-solid fa-wand-magic-sparkles"></i>Extrák</button>
+</nav>
+
+<div class="modern-player-bar" id="modern-player-bar">
+  <div class="modern-player-main">
+    <img id="modern-art" class="modern-art" alt="">
+    <div class="modern-meta">
+      <div id="modern-title" class="modern-title">Nincs lejátszás</div>
+      <div id="modern-sub" class="modern-sub">Streamify</div>
+    </div>
+    <div class="modern-controls">
+      <button onclick="modernPrev()" aria-label="Előző"><i class="fa-solid fa-backward-step"></i></button>
+      <button onclick="modernToggle()" aria-label="Lejátszás"><i id="modern-play-icon" class="fa-solid fa-play"></i></button>
+      <button onclick="modernNext()" aria-label="Következő"><i class="fa-solid fa-forward-step"></i></button>
+    </div>
+  </div>
+  <div class="modern-progress"><div id="modern-progress"></div></div>
+</div>
+
+<div id="mobile-features-modal" class="hidden fixed inset-0 z-[100] bg-black/70 backdrop-blur-md p-4">
+  <div class="max-w-lg mx-auto mt-8 bg-[#111] rounded-3xl border border-white/10 p-5 max-h-[82dvh] overflow-auto">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-black">Streamify Extrák</h2>
+      <button onclick="closeMobileFeatures()" class="w-10 h-10 rounded-full bg-white/10"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="feature-grid">
+      <button class="feature-tile text-left" onclick="toggleThemePro()"><i class="fa-solid fa-circle-half-stroke"></i><b>Téma</b><small>Világos / sötét</small></button>
+      <button class="feature-tile text-left" onclick="openSleepTimer()"><i class="fa-solid fa-moon"></i><b>Alvásidőzítő</b><small>15 / 30 / 60 perc</small></button>
+      <button class="feature-tile text-left" onclick="toggleShufflePro()"><i class="fa-solid fa-shuffle"></i><b>Véletlen</b><small>Lejátszási mód</small></button>
+      <button class="feature-tile text-left" onclick="requestWakeLockPro()"><i class="fa-solid fa-sun"></i><b>Képernyő</b><small>Ébren tartás</small></button>
+      <button class="feature-tile text-left" onclick="shareStreamify()"><i class="fa-solid fa-share-nodes"></i><b>Megosztás</b><small>Streamify link</small></button>
+      <button class="feature-tile text-left" onclick="showQueuePro()"><i class="fa-solid fa-list"></i><b>Lejátszási sor</b><small>Aktuális sor</small></button>
+    </div>
+    <div class="yt-mobile-warning">
+      <b>YouTube háttérlejátszás:</b> az iOS nem engedi, hogy a beágyazott YouTube iframe-et a Streamify
+      megbízhatóan tovább futtassa lezárt képernyőn. Ezt nem lehet JavaScripttel kikerülni. A saját/licencelt
+      hangfájlok viszont használhatók az iOS audio lejátszójával.
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  function currentTrackPro(){
+    try { return getCombinedTracks()[state.currentTrackIndex]; } catch(e){ return null; }
+  }
+  window.updateModernPlayer = function(){
+    const t=currentTrackPro(); if(!t) return;
+    $('modern-player-bar')?.classList.add('show');
+    if($('modern-title')) $('modern-title').textContent=t.title||'Ismeretlen szám';
+    if($('modern-sub')) $('modern-sub').textContent=t.artist||'Streamify';
+    if($('modern-art')) $('modern-art').src=t.thumbnail||'';
+    if($('modern-play-icon')) $('modern-play-icon').className='fa-solid '+(state.isPlaying?'fa-pause':'fa-play');
+  };
+  window.modernToggle=function(){ try{ state.isPlaying ? pauseAudio() : playAudio(); updateModernPlayer(); }catch(e){} };
+  window.modernPrev=function(){ try{ prevTrack(); setTimeout(updateModernPlayer,100); }catch(e){} };
+  window.modernNext=function(){ try{ nextTrack(); setTimeout(updateModernPlayer,100); }catch(e){} };
+  window.openMobileFeatures=function(){ $('mobile-features-modal')?.classList.remove('hidden'); };
+  window.closeMobileFeatures=function(){ $('mobile-features-modal')?.classList.add('hidden'); };
+  window.toggleThemePro=function(){
+    document.documentElement.classList.toggle('dark');
+    localStorage.setItem('streamify_theme_dark',document.documentElement.classList.contains('dark')?'1':'0');
+  };
+  window.toggleShufflePro=function(){
+    try{ state.shuffle=!state.shuffle; localStorage.setItem('streamify_state',JSON.stringify(state)); updateUI(); }catch(e){}
+  };
+  window.requestWakeLockPro=async function(){
+    try {
+      if('wakeLock' in navigator){ window.streamifyWakeLock=await navigator.wakeLock.request('screen'); alert('A képernyő ébren marad, amíg az iOS engedi.'); }
+      else alert('Ezen az iOS-verzión a képernyő-ébrentartás nem érhető el.');
+    } catch(e){ alert('A képernyő-ébrentartás nem engedélyezhető.'); }
+  };
+  window.shareStreamify=async function(){
+    try{
+      if(navigator.share) await navigator.share({title:'Streamify',text:'Streamify zenelejátszó',url:location.href});
+      else await navigator.clipboard.writeText(location.href);
+    }catch(e){}
+  };
+  window.showQueuePro=function(){
+    closeMobileFeatures();
+    try{
+      const q=(state.queue||[]).map((x,i)=>(i+1)+'. '+(x.title||'Ismeretlen')).join('\n');
+      alert(q||'A lejátszási sor üres.');
+    }catch(e){}
+  };
+  window.openSleepTimer=function(){
+    closeMobileFeatures();
+    const mins=prompt('Alvásidőzítő percben (15, 30, 60 vagy 0 a kikapcsoláshoz):','30');
+    const n=Number(mins);
+    if(![0,15,30,60].includes(n)) return;
+    clearTimeout(window.streamifySleepTimer);
+    if(n) window.streamifySleepTimer=setTimeout(()=>{try{pauseAudio();}catch(e){}},n*60000);
+  };
+
+  // Smoothly mirror existing player state into the compact mobile player.
+  const oldPlay=window.playAudio, oldPause=window.pauseAudio;
+  if(oldPlay) window.playAudio=function(){ const r=oldPlay.apply(this,arguments); setTimeout(updateModernPlayer,30); return r; };
+  if(oldPause) window.pauseAudio=function(){ const r=oldPause.apply(this,arguments); setTimeout(updateModernPlayer,30); return r; };
+
+  document.addEventListener('timeupdate',function(){
+    try{
+      const a=$('audio-player');
+      if(a && a.duration) $('modern-progress').style.width=((a.currentTime/a.duration)*100)+'%';
+    }catch(e){}
+  });
+  setTimeout(updateModernPlayer,500);
+})();
+</script>
+
 </body>
 </html>
