@@ -1,16 +1,20 @@
-STREAMIFY – GitHub Pages csomag
+Streamify – GitHub Pages csomag
 
-Feltöltés iPhone-ról:
-1. Nyisd meg a GitHub repositorydat.
-2. Add file -> Upload files.
-3. Töltsd fel ezt a 3 fájlt ugyanabba a mappába:
-   - index.html
-   - manifest.json
-   - sw.js
-4. Commit changes.
-5. GitHub -> Settings -> Pages -> Deploy from a branch -> main -> / (root).
+Fájlok:
+- index.html
+- manifest.json
+- sw.js
 
-Fontos:
-- A YouTube API-kulcsot nem kell az index.html-be beleírni. Az oldal saját beállításai között adható meg, és localStorage-ban marad.
-- A YouTube iframe hivatalos beágyazását használja; iOS háttérlejátszást YouTube-tartalomnál a weboldal nem tudja garantálni.
-- A saját/licencelt audiofájlok <audio> lejátszással jobb alapot adnak iOS háttérlejátszáshoz.
+A YouTube API-kulcs be van építve az index.html-be.
+
+FONTOS:
+A böngészőben használt API-kulcs nyilvánosan látható lesz. A Google Cloud Console-ban érdemes
+HTTP referrer korlátozást beállítani a saját GitHub Pages domainedre, és csak a szükséges
+YouTube Data API jogosultságot engedélyezni.
+
+iOS háttérlejátszás:
+A Streamify YouTube iframe-es lejátszást használ. GitHub Pages statikus tárhely, és a YouTube
+IFrame Player API nem ad garantált iOS háttérlejátszást/lezárt képernyős lejátszást. Ezt nem lehet
+megbízhatóan megoldani egy egyszerű JavaScript-kóddal vagy az iframe elrejtésével.
+
+A csomag a hivatalos YouTube IFrame Player API-t használja.
